@@ -1,12 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { QRCode } from 'react-qrcode-logo';
-import { useAuth } from '../contexts/AuthContext';
-import { qrAPI } from '../services/api';
-import toast from 'react-hot-toast';
 import { saveAs } from 'file-saver';
+import toast, { Toaster } from 'react-hot-toast';
 
 const QRGenerator = () => {
-  const { user } = useAuth();
   const qrRef = useRef();
   
   // QR Data States
@@ -24,8 +21,7 @@ const QRGenerator = () => {
   const [qrStyle, setQrStyle] = useState('squares');
   const [eyeRadius, setEyeRadius] = useState(0);
   
-  // Advanced Features
-  const [isDynamic, setIsDynamic] = useState(false);
+  // WiFi and vCard data
   const [wifiData, setWifiData] = useState({ ssid: '', encryption: 'WPA', password: '' });
   const [vcardData, setVcardData] = useState({ name: '', phone: '', email: '' });
 
@@ -63,7 +59,7 @@ const QRGenerator = () => {
     }
   };
 
-  // Download QR code - FIXED VERSION
+  // Download QR code
   const downloadQR = () => {
     try {
       const canvas = document.querySelector('canvas');
@@ -81,85 +77,23 @@ const QRGenerator = () => {
     }
   };
 
-  // Save QR to database - FIXED VERSION
-  const saveQRCode = async () => {
-    if (!user) {
-      toast.error('Please login to save QR codes');
-      return;
-    }
-
-    const loadingToast = toast.loading('Saving QR code...');
-
-    try {
-      // Prepare the content based on QR type
-      let content;
-      if (qrType === 'wifi') {
-        content = {
-          ssid: wifiData.ssid || 'My WiFi',
-          encryption: wifiData.encryption || 'WPA',
-          password: wifiData.password || ''
-        };
-      } else if (qrType === 'vcard') {
-        content = {
-          name: vcardData.name || 'Contact',
-          phone: vcardData.phone || '',
-          email: vcardData.email || ''
-        };
-      } else {
-        content = qrValue || 'https://example.com';
-      }
-
-      // Format eyeRadius properly - FIXED
-      const formattedEyeRadius = [
-        { outer: Number(eyeRadius), inner: Number(eyeRadius) },
-        { outer: Number(eyeRadius), inner: Number(eyeRadius) },
-        { outer: Number(eyeRadius), inner: Number(eyeRadius) }
-      ];
-
-      const qrData = {
-        title: title || 'My QR Code',
-        type: qrType,
-        content: content,
-        config: {
-          size: Number(size) || 300,
-          foregroundColor: fgColor || '#000000',
-          backgroundColor: bgColor || '#FFFFFF',
-          logoUrl: logoImage || null,
-          logoWidth: Number(logoWidth) || 60,
-          errorLevel: errorLevel || 'M',
-          qrStyle: qrStyle || 'squares',
-          eyeRadius: formattedEyeRadius
-        },
-        isDynamic: isDynamic || false
-      };
-
-      const response = await qrAPI.create(qrData);
-      
-      toast.dismiss(loadingToast);
-      toast.success('QR Code saved successfully!');
-      
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      console.error('Save error:', error);
-      
-      if (error.response) {
-        toast.error(error.response.data?.message || 'Server error occurred');
-      } else if (error.request) {
-        toast.error('Cannot connect to server. Is backend running?');
-      } else {
-        toast.error('Failed to save QR code: ' + error.message);
-      }
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Create QR Code</h1>
+      <Toaster position="top-right" />
+      
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Create QR Codes Instantly
+        </h1>
+        <p className="text-lg text-gray-600">
+          Free, no registration required. Customize colors, add logos, and download instantly.
+        </p>
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column - QR Code Display */}
         <div className="bg-white p-6 rounded-lg shadow-lg sticky top-24">
-          <h2 className="text-xl font-semibold mb-4">Preview</h2>
+          <h2 className="text-xl font-semibold mb-4 text-center">Your QR Code</h2>
           <div className="flex justify-center mb-4">
             <div className="border-2 border-gray-200 p-4 rounded-lg inline-block bg-white">
               <QRCode
@@ -179,18 +113,12 @@ const QRGenerator = () => {
             </div>
           </div>
           
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center">
             <button
               onClick={downloadQR}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
+              className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition shadow-md font-semibold"
             >
-              Download PNG
-            </button>
-            <button
-              onClick={saveQRCode}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-            >
-              Save to Account
+              Download QR Code (PNG)
             </button>
           </div>
         </div>
@@ -217,21 +145,6 @@ const QRGenerator = () => {
               <option value="wifi">Wi-Fi Network</option>
               <option value="vcard">vCard (Business Card)</option>
             </select>
-          </div>
-
-          {/* Dynamic QR Option */}
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={isDynamic}
-                onChange={(e) => setIsDynamic(e.target.checked)}
-                className="rounded border-gray-300 text-indigo-600 mr-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Make it Dynamic (editable after creation)
-              </span>
-            </label>
           </div>
 
           {/* Content Input - Dynamic based on type */}
@@ -310,13 +223,14 @@ const QRGenerator = () => {
           {/* Title */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              QR Code Title (for your reference)
+              QR Code Name (for download file)
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full border border-gray-300 rounded-md p-2"
+              placeholder="Enter name for your QR code"
             />
           </div>
 
@@ -376,6 +290,21 @@ const QRGenerator = () => {
             </select>
           </div>
 
+          {/* Eye Radius */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Corner Radius: {eyeRadius}px
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="50"
+              value={eyeRadius}
+              onChange={(e) => setEyeRadius(Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
           {/* Error Correction Level */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -386,26 +315,11 @@ const QRGenerator = () => {
               onChange={(e) => setErrorLevel(e.target.value)}
               className="w-full border border-gray-300 rounded-md p-2"
             >
-              <option value="L">Low (7%)</option>
-              <option value="M">Medium (15%)</option>
-              <option value="Q">Quartile (25%)</option>
-              <option value="H">High (30%)</option>
+              <option value="L">Low (7%) - Best for simple QR codes</option>
+              <option value="M">Medium (15%) - Good balance</option>
+              <option value="Q">Quartile (25%) - Better with logos</option>
+              <option value="H">High (30%) - Best with logos</option>
             </select>
-          </div>
-
-          {/* Eye Radius */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Eye Corner Radius: {eyeRadius}px
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="50"
-              value={eyeRadius}
-              onChange={(e) => setEyeRadius(Number(e.target.value))}
-              className="w-full"
-            />
           </div>
 
           {/* Logo Upload */}
